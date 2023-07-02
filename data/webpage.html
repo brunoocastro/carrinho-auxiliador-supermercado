@@ -13,11 +13,28 @@
     align-items: center;
     justify-content: center;
     font-size: 24px;
+    position: relative;
   }
 
-  span {
+  .container {
     color: #7ab3ec;
-    width: 40%;
+    width: 70%;
+  }
+  
+  .loadingContainer {
+    background-color: rgba(65, 55, 55, 0.568);
+    position: absolute;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    width: 100%;
   }
 
   h1 {
@@ -69,251 +86,36 @@
 </style>
 
 <body>
-  <span>
+  <div class="container">
     <h1>Carrinho auxiliador</h1>
     <h3 style="display: flex; align-items: center; justify-content: center;">ID: 
       <p style="margin-left: 16px;" #id>
         27
       </p>
     </h3>
-    <form>
-      <button id='CartStatus' type='button' name='CartStatus' disabled=false
-        style='background-color:#2E8A34;'>Testar funcionamento</button>
-
-      <button id='ProgrammingMode' type='button' disabled=false style='background-color:#7A37A4;'>
-        Adicionar ou remover acesso
-      </button>
-    </form>
-    <h2 id="Loading">Carregando...</h2>
-    <h2 id="RegisteringText" style="opacity: 0;">
-      Aproxime uma tag quando as luzes estiverem piscando!
-    </h2>
-    <h2 id="RegisteringTextOBS" style="opacity: 0; color:#e9b361; font-size: 24px;">
-      OBS:
-      </br>
-      Caso seja uma nova tag, ela será cadastrada.
-      </br>
-      Mas se já estiver cadastrada, será removida.
-    </h2>
-  </span>
+    <div style="display: grid; grid-template-columns: 4fr 1fr; align-items: center;">
+      <div>
+        Controle de velocidade
+      </div>
+      <p id="CartControlStatus" style="text-align: center; font-weight: bold; color: rgb(184, 75, 61);">INATIVO</p>
+      <div>
+        Velocidade atual
+      </div>
+      <div style="display: inline-flex; align-items: center; gap: 8px; font-weight: bold; color: white;">
+        <p id="CartCurrentVel">0</p>
+        RPM
+      </div>
+      <div>
+        Velocidade alvo
+      </div>
+      <div style="display: inline-flex; align-items: center; gap: 8px; font-weight: bold; color: white;">
+      <p id="CartTargetVel" style="text-align: center; font-weight: bold; color: white;">0</p>
+      RPM
+    </div>
+    </div>
+    <h2 id="loadingContainer" class="loadingContainer">Estabelecendo conexão...<h2>
+  </div>
 </body>
-<script>
-  const HOST = !!window?.location?.hostname ? window?.location?.hostname : "localhost";
-  console.log("[HOST] - Tentando conectar ao host :", HOST);
-
-
-  function setReadingButton() {
-    document.getElementById('Loading').style.opacity = '0';
-    document.getElementById('RegisteringText').style.opacity = '0';
-    document.getElementById('RegisteringTextOBS').style.opacity = '0';
-
-    document.getElementById('CartStatus').disabled = false;
-
-    document.getElementById('ProgrammingMode').textContent = 'Cadastrar ou remover acesso';
-    document.getElementById('ProgrammingMode').style.backgroundColor = 'rgb(122, 55, 164)';
-  }
-
-  function setRegisterButton() {
-    document.getElementById('Loading').style.opacity = '0';
-    document.getElementById('RegisteringText').style.opacity = '1';
-    document.getElementById('RegisteringTextOBS').style.opacity = '1';
-
-    document.getElementById('CartStatus').disabled = true;
-
-    document.getElementById('ProgrammingMode').textContent = 'Cancelar';
-    document.getElementById('ProgrammingMode').style.backgroundColor = 'rgb(6, 9, 19)';
-  }
-
-  const availableEvents = {
-    isRegistrationMode: updateProgrammingModeFromSocket,
-    isDoorOpen: updateDoorStatusFromSocket,
-  }
-
-  let Socket;
-
-  function sendWebsocketMessage(socketMsg) {
-    Socket.send(JSON.stringify(socketMsg));
-  }
-
-  function onWebsocketMessage(event) {
-    processCommand(event);
-  }
-  function onWebsocketOpen() {
-    console.log('[WS] -> Connected successfully!')
-    requestCurrentStatusFromSocket();
-  }
-  function onWebsocketClose() {
-    console.log('[WS] -> Connection lost. Trying to reconnect in 2 seconds!');
-    document.getElementById('CartStatus').disabled = true;
-    document.getElementById('ProgrammingMode').disabled = true;
-    setTimeout(initWebSocket, 2000);
-  }
-
-  function handleReceivedStateFromSocket(data) {
-    const { isDoorOpen, isRegistrationMode } = data;
-    console.log("[WS] - Received system state from Socket: ", { isDoorOpen, isRegistrationMode });
-
-    if (isDoorOpen !== undefined && isDoorOpen !== null)
-      updateDoorStatusFromSocket(isDoorOpen);
-
-    if (isRegistrationMode !== undefined && isRegistrationMode !== null)
-      updateProgrammingModeFromSocket(isRegistrationMode);
-
-    document.getElementById("Loading").style.display = 'none';
-  }
-
-  function setRegistrationMode() {
-    const socketMsg = { type: 'isRegistrationMode', value: true };
-    console.log("Sending socket msg for programing mode", { socketMsg });
-    sendWebsocketMessage(socketMsg);
-  }
-
-  function setReadingMode() {
-    const socketMsg = { type: 'isRegistrationMode', value: false };
-    console.log("Sending socket msg for reading mode", { socketMsg });
-    sendWebsocketMessage(socketMsg);
-  }
-
-  function setDoorButtonOpened() {
-    document.getElementById('CartStatus').textContent = 'FECHAR';
-    document.getElementById('CartStatus').style.backgroundColor = 'rgb(184, 75, 61)';
-  }
-  function setDoorButtonClosed() {
-    document.getElementById('CartStatus').textContent = 'ABRIR';
-    document.getElementById('CartStatus').style.backgroundColor = 'rgb(46, 138, 52)';
-  }
-
-  function setDoorClosed() {
-    const socketMsg = { type: 'isDoorOpen', value: false };
-    console.log("Sending socket msg for door status", { socketMsg });
-    sendWebsocketMessage(socketMsg);
-  }
-
-  function setDoorOpened() {
-    const socketMsg = { type: 'isDoorOpen', value: true };
-    console.log("Sending socket msg for door status", { socketMsg });
-    sendWebsocketMessage(socketMsg);
-  }
-
-  function changeDoorStatus() {
-    const isDoorOpen = document.getElementById('CartStatus').textContent.toUpperCase() === 'FECHAR'.toUpperCase();
-    console.log("[HTML] - Changing door status to: ", !isDoorOpen);
-    if (isDoorOpen) {
-      setDoorClosed();
-    } else {
-      setDoorOpened();
-    }
-  }
-
-  function changeProgrammingMode() {
-    const isRegistrationMode = document.getElementById('ProgrammingMode').textContent.toUpperCase() === 'Cancelar'.toUpperCase();
-    console.log("[HTML] - Changing register mode to: ", !isRegistrationMode);
-    document.getElementById('ProgrammingMode').disabled = false;
-
-    if (isRegistrationMode) {
-      setReadingMode();
-    } else {
-      setRegistrationMode();
-    }
-  }
-
-  function requestCurrentStatusFromSocket() {
-    const socketMsg = { type: 'getData', value: true };
-    sendWebsocketMessage(socketMsg);
-  }
-
-  function updateDoorStatusFromSocket(isDoorOpen) {
-    console.log("[WS] - Updating door opened status to " + isDoorOpen);
-    document.getElementById('CartStatus').disabled = false;
-
-    if (isDoorOpen) {
-      setDoorButtonOpened();
-    } else {
-      setDoorButtonClosed();
-    }
-  }
-
-  function updateProgrammingModeFromSocket(isRegistrationMode) {
-    console.log("[WS] - Updating is registration to: " + isRegistrationMode);
-    document.getElementById('ProgrammingMode').disabled = false;
-
-    if (isRegistrationMode) {
-      setRegisterButton();
-    } else {
-      setReadingButton();
-    }
-  }
-
-  function processCommand(event) {
-    let { type, value, ...content } = JSON.parse(event.data);
-    // console.log("[WS] - Received Event: ", { type, value, content });
-
-    if (type === "getData") {
-      // console.log("[WS] - State update event received: ", { content, type });
-      return handleReceivedStateFromSocket(content);
-    }
-
-    if (availableEvents[type]) availableEvents[type](value);
-  }
-
-  function initWebSocket() {
-    console.log('Trying to initialize websocket connection.');
-    Socket = new WebSocket('ws://' + HOST + ':81/');
-    Socket.onmessage = onWebsocketMessage;
-    Socket.onclose = onWebsocketClose;
-    Socket.onopen = onWebsocketOpen;
-
-    document.getElementById('ProgrammingMode').addEventListener('click', (e) => {
-      e.preventDefault();
-      changeProgrammingMode();
-    });
-    document.getElementById('CartStatus').addEventListener('click', (e) => {
-      e.preventDefault();
-      changeDoorStatus();
-    });
-  }
-
-  window.onload = initWebSocket;
-
-
-  const DATA_COUNT = 7;
-const NUMBER_CFG = {count: DATA_COUNT, min: -100, max: 100};
-
-const labels = Utils.months({count: 7});
-const data = {
-  labels: labels,
-  datasets: [
-    {
-      label: 'Dataset 1',
-      data: Utils.numbers(NUMBER_CFG),
-      borderColor: Utils.CHART_COLORS.red,
-      backgroundColor: Utils.transparentize(Utils.CHART_COLORS.red, 0.5),
-    },
-    {
-      label: 'Dataset 2',
-      data: Utils.numbers(NUMBER_CFG),
-      borderColor: Utils.CHART_COLORS.blue,
-      backgroundColor: Utils.transparentize(Utils.CHART_COLORS.blue, 0.5),
-    }
-  ]
-};
-
-const config = {
-  type: 'line',
-  data: data,
-  options: {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'top',
-      },
-      title: {
-        display: true,
-        text: 'Chart.js Line Chart'
-      }
-    }
-  },
-};
+<script type="text/javascript" src="webpageServer.js">
 </script>
-
 </html>

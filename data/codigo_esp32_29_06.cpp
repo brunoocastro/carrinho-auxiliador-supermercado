@@ -146,7 +146,7 @@ void setup()
 
 void loop()
 {
-  if (isButtonPressed)
+  if (isButtonPressed())
     handleControl();
   else
     setControlOff();

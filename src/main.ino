@@ -14,34 +14,31 @@
 TaskHandle_t task1Handle;
 volatile bool buttonState = false;
 
-//inicialização das variaveis 
-float t1 = 0, t2 = 0, delta = 0, uz= 0, uz1=0, ez=0, ez1=0, v=0;//tempos
+// inicialização das variaveis
+float t1 = 0, t2 = 0, delta = 0, uz = 0, uz1 = 0, ez = 0, ez1 = 0, v = 0; // tempos
 float vel = 0;
 
-
 // Motor A
-int IN2 = 18; 
-int IN1 = 19; 
-int ENA = 2; 
+int IN2 = 18;
+int IN1 = 19;
+int ENA = 2;
 
 // Motor B
-int IN4 = 16; 
-int IN3 = 17; 
-int ENB = 15; 
+int IN4 = 16;
+int IN3 = 17;
+int ENB = 15;
 
-//Entradas
+// Entradas
 int sensorPin = 14;
 int buttonPin = 36;
-int potentiometerPin = 39;  // Pino analógico GPIO34 no ESP32
+int potentiometerPin = 39; // Pino analógico GPIO34 no ESP32
 
-
-//pré sets pwm
+// pré sets pwm
 int frequency = 30000;
 int pwmChannel = 0;
 int resolution = 8;
 
 int dutyCycle = 200;
-
 
 const char *accessPointSSID = "CarrinhoSupermercado";
 const char *accessPointPassword = "michels2023";
@@ -50,8 +47,8 @@ IPAddress local_IP(192, 168, 13, 07);
 IPAddress gateway(192, 168, 1, 5);
 IPAddress subnet(255, 255, 255, 0);
 
-// AsyncWebServer webServer(80);
-// WebSocketsServer webSocket = WebSocketsServer(81);
+AsyncWebServer webServer(80);
+WebSocketsServer webSocket = WebSocketsServer(81);
 
 float getCurrentVelocity()
 {
@@ -101,7 +98,8 @@ void setControlOff()
   ez1 = 0;
 }
 
-int getTargetVelocity(){ 
+int getTargetVelocity()
+{
   return map(analogRead(potentiometerPin), 0, 4095, 150, 220);
 }
 
@@ -135,7 +133,7 @@ void handleControl()
   Serial.println(v);
   // Serial.print(delta);
   //   Serial.print(" ------------ ");
-  Serial.println("velocidade");
+  Serial.println("Velocidade");
   Serial.println(vel);
 }
 
@@ -143,8 +141,13 @@ bool isButtonPressed()
 {
   buttonState = digitalRead(buttonPin);
 
+  Serial.println("buttonState");
+  Serial.println(buttonState);
+
   if (buttonState == LOW)
+  {
     return true;
+  }
 
   return false;
 }
@@ -176,7 +179,6 @@ void initSPIFFS()
     delay(5000);
     return ESP.restart();
   }
-
 };
 
 void initWebServer()
@@ -200,9 +202,7 @@ void initWebSocket()
 
 void sendCurrentStatus()
 {
-  isControlRunning: IS_CONTROL_RUNNING,
-      currentVelocity
-  String currentStatusParsed = String("{\"type\":\"getData\",\"isControlRunning\":") + isButtonPressed() + ",\"currentVelocity\":" + getCurrentVelocity() + ",\"targetVelocity\":" + getTargetVelocity() +"}";
+  String currentStatusParsed = String("{\"type\":\"getData\",\"isControlRunning\":") + isButtonPressed() + ",\"currentVelocity\":" + getCurrentVelocity() + ",\"targetVelocity\":" + getTargetVelocity() + "}";
 
   Serial.println("[WS] Send Current Status to WEB -> " + currentStatusParsed);
 
@@ -245,7 +245,7 @@ void onWebSocketEvent(byte clientId, WStype_t eventType, uint8_t *payload, size_
 
     Serial.println("[WS] Event type " + String(event_type) + " : " + event_value);
     handleValidEvents(String(event_type), event_value);
- };
+  };
 };
 
 void setup()
@@ -287,7 +287,7 @@ void setup()
 void loop()
 {
   webSocket.loop();
-  if (isButtonPressed)
+  if (isButtonPressed())
     handleControl();
   else
     setControlOff();

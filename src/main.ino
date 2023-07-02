@@ -1,14 +1,16 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <ArduinoJson.h>
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <WebSocketsServer.h>
 #include <EEPROM.h>
 #include <SPIFFS.h>
 #include <SPI.h>
 #include <FS.h>
 #include <esp_task_wdt.h>
+
+#include <ArduinoJson.h>
+#include <WebSocketsServer.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+
 TaskHandle_t task1Handle;
 volatile bool buttonState = false;
 
@@ -18,26 +20,27 @@ float vel = 0;
 
 
 // Motor A
-#define IN2 18; 
-#define IN1 19; 
-#define ENA 2; 
+int IN2 = 18; 
+int IN1 = 19; 
+int ENA = 2; 
 
 // Motor B
-#define IN4 16; 
-#define IN3 17; 
-#define ENB 15; 
+int IN4 = 16; 
+int IN3 = 17; 
+int ENB = 15; 
 
 //Entradas
-#define sensorPin 14;
-#define buttonPin 36;
-#define potentiometerPin 39;  // Pino analógico GPIO34 no ESP32
+int sensorPin = 14;
+int buttonPin = 36;
+int potentiometerPin = 39;  // Pino analógico GPIO34 no ESP32
 
 
 //pré sets pwm
-#define frequency 30000;
-#define pwmChannel 0;
-#define resolution 8;
-#define dutyCycle 200;
+int frequency = 30000;
+int pwmChannel = 0;
+int resolution = 8;
+
+int dutyCycle = 200;
 
 
 const char *accessPointSSID = "CarrinhoSupermercado";
@@ -47,8 +50,8 @@ IPAddress local_IP(192, 168, 13, 07);
 IPAddress gateway(192, 168, 1, 5);
 IPAddress subnet(255, 255, 255, 0);
 
-AsyncWebServer webServer(80);
-WebSocketsServer webSocket = WebSocketsServer(81);
+// AsyncWebServer webServer(80);
+// WebSocketsServer webSocket = WebSocketsServer(81);
 
 float getCurrentVelocity()
 {
@@ -58,7 +61,7 @@ float getCurrentVelocity()
   if (delta < 5)
     delta = 5;
 
-  vel = 60000 / (delta * 15); // tepos de uma volta em (ms)
+  vel = 60000 / (delta * 15); // tempo de uma volta em milissegundos
   return vel;
 }
 
@@ -90,6 +93,7 @@ void setControlOff()
   digitalWrite(IN1, LOW);
   digitalWrite(IN4, LOW);
   digitalWrite(IN3, LOW);
+
   dutyCycle = 0;
   uz = 0;
   uz1 = 0;
@@ -98,7 +102,7 @@ void setControlOff()
 }
 
 int getTargetVelocity(){ 
-  return map(analogRead(potentiometerPin), 0, 4095, 150, 220)
+  return map(analogRead(potentiometerPin), 0, 4095, 150, 220);
 }
 
 void handleControl()
@@ -260,7 +264,7 @@ void setup()
 
   xTaskCreatePinnedToCore(readEncoderTask, "Task 1", 4096, NULL, 1, &task1Handle, 0);
 
-  // Configure LED PWM functionalitites
+  // Configure LED PWM functionalities
   ledcSetup(pwmChannel, frequency, resolution);
 
   // Attach the channel to the GPIO to be controlled

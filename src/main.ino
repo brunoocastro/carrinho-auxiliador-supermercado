@@ -292,6 +292,8 @@ void loop()
   else
     setControlOff();
 
+  sendCurrentStatus();
+
   delay(500);
   digitalWrite(BUILTIN_LED, HIGH);
   delay(500);

@@ -2,11 +2,11 @@ const HOST = !!window?.location?.hostname ? window?.location?.hostname : "localh
   console.log("[HOST] - Tentando conectar ao host :", HOST);
 
   function setCurrentVelocity(velocity) {
-    document.getElementById('CartCurrentVel').textContent = Number(velocity).toFixed(0);
+    document.getElementById('CartCurrentVel').textContent = Number(velocity).toFixed(1);
   }
   
   function setTargetVelocity(velocity) {
-    document.getElementById('CartTargetVel').textContent = Number(velocity).toFixed(0);
+    document.getElementById('CartTargetVel').textContent = Number(velocity).toFixed(1);
   }
 
   const availableEvents = {
@@ -33,8 +33,8 @@ const HOST = !!window?.location?.hostname ? window?.location?.hostname : "localh
   }
 
   function handleReceivedStateFromSocket(data) {
-    const { currentVelocity, isControlRunning, currentTargetVelocity } = data;
-    console.log("[WS] - Received system state from Socket: ", { currentVelocity, isControlRunning, currentTargetVelocity });
+    const { currentVelocity, isControlRunning, targetVelocity } = data;
+    console.log("[WS] - Received system state from Socket: ", { currentVelocity, isControlRunning, targetVelocity });
 
     if (isControlRunning !== undefined && isControlRunning !== null)
       updateCartControlState(isControlRunning);
@@ -42,8 +42,8 @@ const HOST = !!window?.location?.hostname ? window?.location?.hostname : "localh
     if (currentVelocity !== undefined && currentVelocity !== null)
       updateCartCurrentVelocityFromSocket(currentVelocity);
     
-      if (currentTargetVelocity !== undefined && currentTargetVelocity !== null)
-      updateCartTargetVelocityFromSocket(currentTargetVelocity);
+      if (targetVelocity !== undefined && targetVelocity !== null)
+      updateCartTargetVelocityFromSocket(targetVelocity);
 
     document.getElementById("loadingContainer").style.display = 'none';
   }
@@ -65,7 +65,7 @@ const HOST = !!window?.location?.hostname ? window?.location?.hostname : "localh
   function updateCartTargetVelocityFromSocket(newVelocity) {
     console.log("[WS] - Updating cart target velocity to " + newVelocity);
 
-    setCurrentVelocity(newVelocity)
+    setTargetVelocity(newVelocity)
   }
 
   function updateCartCurrentVelocityFromSocket(newVelocity) {

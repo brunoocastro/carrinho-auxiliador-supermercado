@@ -14,9 +14,13 @@
 TaskHandle_t task1Handle;
 volatile bool buttonState = false;
 
+int bottomPWMLimit = 150;
+int bottomVelocityLimit = 150;
+int topVelocityLimit = 220;
+
 // inicialização das variaveis
-float t1 = 0, t2 = 0, delta = 0, uz = 0, uz1 = 0, ez = 0, ez1 = 0, v = 0; // tempos
-float vel = 0;
+float t1 = 0, t2 = 0, delta = 0, controlZ = 0, controlZLastState = 0, errorZ = 0, errorZLastState = 0, targetVelocity = 0; // tempos
+float currentCartVelocity = 0;
 
 // Motor A
 int IN2 = 18;
@@ -58,8 +62,8 @@ float getCurrentVelocity()
   if (delta < 5)
     delta = 5;
 
-  vel = 60000 / (delta * 15); // tempo de uma volta em milissegundos
-  return vel;
+  currentCartVelocity = 60000 / (delta * 15); // tempo de uma volta em milissegundos
+  return currentCartVelocity;
 }
 
 void readEncoderTask(void *parameter)
@@ -92,57 +96,69 @@ void setControlOff()
   digitalWrite(IN3, LOW);
 
   dutyCycle = 0;
-  uz = 0;
-  uz1 = 0;
-  ez = 0;
-  ez1 = 0;
+  controlZ = 0;
+  controlZLastState = 0;
+  errorZ = 0;
+  errorZLastState = 0;
 }
 
 int getTargetVelocity()
 {
-  return map(analogRead(potentiometerPin), 0, 4095, 150, 220);
+  return map(analogRead(potentiometerPin), 0, 4095, bottomVelocityLimit, topVelocityLimit);
 }
 
 void handleControl()
 {
-  ez = getTargetVelocity() - getCurrentVelocity();
-  uz = uz1 + 0.002092172678595 * ez * 1.5 - 0.001944587 * ez1 * 1.5;
+  targetVelocity = getTargetVelocity();
+  currentCartVelocity = getCurrentVelocity();
+
+  errorZ = targetVelocity - currentCartVelocity;
+  controlZ = controlZLastState + 0.002092172678595 * errorZ * 1.5 - 0.001944587 * errorZLastState * 1.5;
 
   digitalWrite(IN2, LOW);
   digitalWrite(IN1, HIGH);
   digitalWrite(IN4, LOW);
   digitalWrite(IN3, HIGH);
-  uz1 = uz;
-  ez1 = ez;
 
-  dutyCycle = uz;
+  controlZLastState = controlZ;
+  errorZLastState = errorZ;
+
+  dutyCycle = controlZ;
 
   if (dutyCycle >= 255)
   {
     dutyCycle = 255;
-    uz = 0.99;
+    controlZ = 0.99;
   }
-  if (dutyCycle <= 150)
+  if (dutyCycle <= bottomPWMLimit)
   {
-    dutyCycle = 150;
-    uz = 0.588;
+    dutyCycle = bottomPWMLimit;
+    controlZ = 0.588;
   }
 
   ledcWrite(pwmChannel, dutyCycle);
-  Serial.println("set");
-  Serial.println(v);
-  // Serial.print(delta);
-  //   Serial.print(" ------------ ");
-  Serial.println("Velocidade");
-  Serial.println(vel);
+
+  // Serial.print("Duty Cycle: ");
+  // Serial.println(dutyCycle);
+
+  // Serial.print("Target Velocity: ");
+  // Serial.println(targetVelocity);
+
+  // Serial.print("Velocidade: ");
+  // Serial.println(currentCartVelocity);
+
+  // Serial.print("error Z: ");
+  // Serial.println(errorZ);
+
+  // Serial.print("controlZ: ");
+  // Serial.println(controlZ);
+
+  // Serial.println("--------------");
 }
 
 bool isButtonPressed()
 {
   buttonState = digitalRead(buttonPin);
-
-  Serial.println("buttonState");
-  Serial.println(buttonState);
 
   if (buttonState == LOW)
   {
@@ -204,7 +220,7 @@ void sendCurrentStatus()
 {
   String currentStatusParsed = String("{\"type\":\"getData\",\"isControlRunning\":") + isButtonPressed() + ",\"currentVelocity\":" + getCurrentVelocity() + ",\"targetVelocity\":" + getTargetVelocity() + "}";
 
-  Serial.println("[WS] Send Current Status to WEB -> " + currentStatusParsed);
+  // Serial.println("[WS] Send Current Status to WEB -> " + currentStatusParsed);
 
   webSocket.broadcastTXT(currentStatusParsed);
 };
@@ -251,6 +267,19 @@ void onWebSocketEvent(byte clientId, WStype_t eventType, uint8_t *payload, size_
 void setup()
 {
   Serial.begin(115200);
+
+  delay(500);
+
+  initSPIFFS();
+  initAccessPoint();
+  initWebServer();
+
+  delay(500);
+
+  initWebSocket();
+
+  delay(500);
+
   pinMode(BUILTIN_LED, OUTPUT);
   // sets the pins as outputs:
   pinMode(IN2, OUTPUT);
@@ -270,32 +299,16 @@ void setup()
   // Attach the channel to the GPIO to be controlled
   ledcAttachPin(ENA, pwmChannel);
   ledcAttachPin(ENB, pwmChannel);
-
-  delay(500);
-
-  initSPIFFS();
-  initAccessPoint();
-  initWebServer();
-
-  delay(500);
-
-  initWebSocket();
-
-  delay(500);
 }
 
 void loop()
 {
   webSocket.loop();
+
   if (isButtonPressed())
     handleControl();
   else
     setControlOff();
 
   sendCurrentStatus();
-
-  delay(500);
-  digitalWrite(BUILTIN_LED, HIGH);
-  delay(500);
-  digitalWrite(BUILTIN_LED, LOW);
 }

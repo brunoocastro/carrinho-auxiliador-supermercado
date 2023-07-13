@@ -1,8 +1,60 @@
-const HOST = !!window?.location?.hostname ? window?.location?.hostname : "localhost";
+const HOST = !!window ? window?.location?.hostname : "localhost";
+
+const currentVelocityBuffer = [];
+const targetVelocityBuffer = [];
+const velocityBufferSize = 80
+const PlotDivRef = document.getElementById('plotly');
+
+function getXAxis() {
+  return Array.from(Array(velocityBufferSize).keys());
+}
+
+const getTraceFromArray = (array, name, color) => ({
+  x: getXAxis(),
+  y: array,
+  // fill: "tozerox", 
+  fillcolor: "rgba(0,100,80,0.2)",
+  line: { color },
+  name,
+  showlegend: true,
+  type: "scatter"
+});
+
+var data = [getTraceFromArray(targetVelocityBuffer, 'Target', 'red'), getTraceFromArray(currentVelocityBuffer, 'Current', 'blue')];
+var layout = {
+  paper_bgcolor: "rgb(255,255,255)",
+  plot_bgcolor: "rgb(229,229,229)",
+  xaxis: {
+    gridcolor: "rgb(255,255,255)",
+    range: [1, velocityBufferSize],
+    showgrid: true,
+    showline: false,
+    showticklabels: true,
+    tickcolor: "rgb(127,127,127)",
+    ticks: "outside",
+    zeroline: false
+  },
+  yaxis: {
+    gridcolor: "rgb(255,255,255)",
+    showgrid: true,
+    showline: false,
+    showticklabels: true,
+    tickcolor: "rgb(127,127,127)",
+    ticks: "outside",
+    zeroline: false
+  }
+}
+
 console.log("[HOST] - Tentando conectar ao host :", HOST);
 
-const velocityArray = [];
+const bufferDelayInMS = 500
+
+
 let updateVelocityTimer;
+
+function CreatePlotlyGraph() {
+  Plotly.newPlot(PlotDivRef, [getTraceFromArray(targetVelocityBuffer, 'Target', 'red'), getTraceFromArray(currentVelocityBuffer, 'Current', 'blue')], layout);
+}
 
 function setCurrentVelocity(velocity) {
   document.getElementById('CartCurrentVel').textContent = Number(velocity).toFixed(1);
@@ -48,6 +100,9 @@ function handleReceivedStateFromSocket(data) {
   if (targetVelocity !== undefined && targetVelocity !== null)
     updateCartTargetVelocityFromSocket(targetVelocity);
 
+  Plotly.extendTraces(PlotDivRef, { y: [getTraceFromArray(targetVelocityBuffer, 'Target', 'red'), getTraceFromArray(currentVelocityBuffer, 'Current', 'blue')] }, [0])
+
+
   document.getElementById("loadingContainer").style.display = 'none';
 }
 
@@ -68,31 +123,36 @@ function requestCurrentStatusFromSocket() {
 function updateCartTargetVelocityFromSocket(newVelocity) {
   console.log("[WS] - Updating cart target velocity to " + newVelocity);
 
-  setTargetVelocity(newVelocity)
+  const listLastPosition = current[targetVelocityBuffer.length - 1];
+
+  if (listLastPosition.velocity !== newVelocity || !areTimeRemaining(listLastPosition.date)) {
+    if (targetVelocityBuffer.length > velocityBufferSize) targetVelocityBuffer.shift();
+    targetVelocityBuffer.push({ velocity: newVelocity, date: new Date().getTime() });
+    setTargetVelocity(newVelocity)
+  }
 }
 
 function updateCartCurrentVelocityFromSocket(newVelocity) {
   console.log("[WS] - Updating cart current velocity to " + newVelocity);
 
-  // if (updateVelocityTimer) {
+  const listLastPosition = currentVelocityBuffer[currentVelocityBuffer.length - 1];
 
-  //   clearTimeout(updateVelocityTimer)
-  //   updateVelocityTimer = null
-  // };
+  if (listLastPosition.velocity !== newVelocity || !areTimeRemaining(listLastPosition.date)) {
+    if (currentVelocityBuffer.length > velocityBufferSize) currentVelocityBuffer.shift();
+    currentVelocityBuffer.push({ velocity: newVelocity, date: new Date().getTime() });
+    setCurrentVelocity(newVelocity);
+  }
+}
 
-  // velocityArray.push(newVelocity);
-  // if (velocityArray.length > 100) velocityArray.shift();
+function areTimeRemaining(time) {
+  //write a function to validate if time is 
+  const targetTime = new Date(time)
+  const targetWithDelay = new Date(targetTime.getTime() + bufferDelayInMS)
 
+  const nowTime = new Date()
 
-  // const lastVelocities = velocityArray.slice(velocityArray.length -15, velocityArray.length)
-  // const medium = lastVelocities.reduce((a, b) => a + b, 0) / velocityArray.length;
+  return targetWithDelay > nowTime
 
-  // updateVelocityTimer = setTimeout(() => {
-  //   console.log({ velocityArray, newVelocity, medium })
-  //   setCurrentVelocity(medium);
-  // }, 300);
-
-  setCurrentVelocity(newVelocity);
 }
 
 function updateCartControlState(isCartControlled) {
@@ -118,6 +178,7 @@ function processCommand(event) {
 }
 
 function initWebSocket() {
+  CreatePlotlyGraph()
   console.log('[WS] Trying to initialize websocket connection.');
   Socket = new WebSocket('ws://' + HOST + ':81/');
   Socket.onmessage = onWebsocketMessage;

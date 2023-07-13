@@ -5,6 +5,9 @@
   <title>Carrinho auxiliador</title>
   <meta http-equiv=”Content-Type” content=”text/html">
   <meta charset="UTF-8" />
+  <script type="module" src="webpageServer.js" />
+  <script type="module" src="plotly.js" charset="utf-8" />
+
 </head>
 <style>
   body {
@@ -20,7 +23,7 @@
     color: #7ab3ec;
     width: 70%;
   }
-  
+
   .loadingContainer {
     background-color: rgba(65, 55, 55, 0.568);
     position: absolute;
@@ -109,13 +112,12 @@
         Velocidade alvo
       </div>
       <div style="display: inline-flex; align-items: center; gap: 8px; font-weight: bold; color: white;">
-      <p id="CartTargetVel" style="text-align: center; font-weight: bold; color: white;">0</p>
-      RPM
+        <p id="CartTargetVel" style="text-align: center; font-weight: bold; color: white;">0</p>
+        RPM
+      </div>
     </div>
-    </div>
+    <div id="plotly" style="width:600px;height:250px;"></div>
     <h2 id="loadingContainer" class="loadingContainer">Estabelecendo conexão...<h2>
   </div>
 </body>
-<script type="text/javascript" src="webpageServer.js">
-</script>
 </html>

@@ -199,6 +199,8 @@ void initSPIFFS()
 
 void initWebServer()
 {
+  webServer.on("/plotly", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(SPIFFS, "/plotly.js", "javascript"); });
   webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(SPIFFS, "/webpage.html", "text/html"); });
 
